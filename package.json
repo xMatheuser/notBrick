@@ -1,0 +1,13 @@
+{
+  "name": "brick-breaker-online",
+  "version": "1.0.0",
+  "description": "Online Cooperative Brick Breaker Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "node": "^20.19.0",
+    "ws": "^8.13.0"
+  }
+}
