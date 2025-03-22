@@ -816,6 +816,11 @@ class CoopBrickBreaker {
             glow.addColorStop(1, 'rgba(255, 165, 0, 0)');
             this.ctx.fillStyle = glow;
             this.ctx.fillRect(paddleX - 10, paddleY - 10, currentWidth + 20, this.paddle.height + 20);
+
+            if (animationProgress >= 1) {
+                this.paddle.isGrowing = false;
+            }
+        
         } else {
             const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor);
             const paddleGradient = this.ctx.createLinearGradient(paddleX, paddleY, paddleX, paddleY + this.paddle.height);
