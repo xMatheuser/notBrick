@@ -148,6 +148,8 @@ class CoopBrickBreaker {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
         const wsUrl = `${wsProtocol}//${host}`;
+//        const wsUrl = `${wsProtocol}//${host}:8080`; // para usar local
+
 
         this.ws = new WebSocket(wsUrl);
 
@@ -796,12 +798,12 @@ class CoopBrickBreaker {
             const animationDuration = 500;
             const animationProgress = Math.min(1, (Date.now() - this.paddle.growthAnimation) / animationDuration);
             const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor * animationProgress);
-
+        
             const paddleGradient = this.ctx.createLinearGradient(paddleX, paddleY, paddleX, paddleY + this.paddle.height);
             paddleGradient.addColorStop(0, '#4169E1');
             paddleGradient.addColorStop(0.5, '#0095DD');
             paddleGradient.addColorStop(1, '#1E90FF');
-
+        
             this.ctx.beginPath();
             this.ctx.roundRect(paddleX, paddleY, currentWidth, this.paddle.height, [10, 10, 5, 5]);
             this.ctx.fillStyle = paddleGradient;
@@ -810,16 +812,34 @@ class CoopBrickBreaker {
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
             this.ctx.closePath();
-
-            const glow = this.ctx.createRadialGradient(paddleX + currentWidth / 2, paddleY + this.paddle.height / 2, 0, paddleX + currentWidth / 2, paddleY + this.paddle.height / 2, currentWidth / 2);
+        
+            // Ajuste do gradiente radial para cobrir o paddle de forma mais proporcional
+            const glowRadius = Math.max(currentWidth, this.paddle.height) / 2; // Usa a maior dimensão para o raio
+            const glow = this.ctx.createRadialGradient(
+                paddleX + currentWidth / 2, 
+                paddleY + this.paddle.height / 2, 
+                0, 
+                paddleX + currentWidth / 2, 
+                paddleY + this.paddle.height / 2, 
+                glowRadius
+            );
             glow.addColorStop(0, 'rgba(255, 165, 0, 0.3)');
             glow.addColorStop(1, 'rgba(255, 165, 0, 0)');
             this.ctx.fillStyle = glow;
-            this.ctx.fillRect(paddleX - 10, paddleY - 10, currentWidth + 20, this.paddle.height + 20);
-
+        
+            // Desenha o brilho em uma área que corresponde ao tamanho do paddle, com uma pequena margem
+            const glowMargin = 5; // Margem pequena para o brilho
+            this.ctx.fillRect(
+                paddleX - glowMargin, 
+                paddleY - glowMargin, 
+                currentWidth + glowMargin * 2, 
+                this.paddle.height + glowMargin * 2
+            );
+        
             if (animationProgress >= 1) {
                 this.paddle.isGrowing = false;
             }
+        
         
         } else {
             const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor);
