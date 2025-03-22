@@ -22,11 +22,12 @@ class CoopBrickBreaker {
             height: 12,
             x: this.canvas.width / 2 - 50,
             y: this.canvas.height - 30,
-            speed: 6,
+            speed: 8,
             baseWidth: 60,
             growthFactor: 0,
             isGrowing: false,
-            growthAnimation: 0
+            growthAnimation: 0,
+            velocity: 0 // Nova propriedade para rastrear a velocidade do paddle
         };
 
         this.ball = {
@@ -147,9 +148,8 @@ class CoopBrickBreaker {
     connectToServer() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
-        // const wsUrl = `${wsProtocol}//${host}`;
-        const wsUrl = `${wsProtocol}//${host}:8080`; // para usar local
-
+        const wsUrl = `${wsProtocol}//${host}`;
+      // const wsUrl = `${wsProtocol}//${host}:8080`;
 
         this.ws = new WebSocket(wsUrl);
 
@@ -402,8 +402,8 @@ class CoopBrickBreaker {
                 }
             } else {
                 this.ballDirection.isAiming = false;
-                let newPaddleX = relativeX - this.paddle.width / 2;
-                newPaddleX = Math.max(0, Math.min(newPaddleX, this.canvas.width - this.paddle.width));
+                const newPaddleX = Math.max(0, Math.min(relativeX - this.paddle.width / 2, this.canvas.width - this.paddle.width));
+                this.paddle.velocity = newPaddleX - this.paddle.x; // Calcular velocidade do paddle
                 this.paddle.x = newPaddleX;
             }
         }
@@ -560,7 +560,21 @@ class CoopBrickBreaker {
                 ball.y += ball.dy;
                 if (ball.x + ball.radius > this.canvas.width || ball.x - ball.radius < 0) ball.dx *= -1;
                 if (ball.y - ball.radius < 0) ball.dy *= -1;
-                if (ball.y + ball.radius > this.paddle.y && ball.x > this.paddle.x && ball.x < this.paddle.x + this.paddle.width) ball.dy = -ball.speed;
+                if (ball.y + ball.radius > this.paddle.y && ball.x > this.paddle.x && ball.x < this.paddle.x + this.paddle.width) {
+                    ball.dy = -ball.speed;
+                    const spinFactor = 0.1; // Fator de influência do movimento do paddle
+                    const maxSpin = 2; // Limite máximo de velocidade horizontal adicionada
+                    let newDx = ball.dx + (this.paddle.velocity * spinFactor);
+                    newDx = Math.max(-maxSpin, Math.min(maxSpin, newDx));
+                    const totalSpeed = Math.sqrt(newDx * newDx + ball.dy * ball.dy);
+                    if (totalSpeed > 0) {
+                        const scale = ball.speed / totalSpeed;
+                        ball.dx = newDx * scale;
+                        ball.dy = ball.dy * scale;
+                    } else {
+                        ball.dx = newDx;
+                    }
+                }
                 if (ball.y + ball.radius > this.canvas.height) {
                     if (!ball.isOriginal) this.balls.splice(i, 1);
                     else {
@@ -813,8 +827,7 @@ class CoopBrickBreaker {
             this.ctx.stroke();
             this.ctx.closePath();
         
-            // Ajuste do gradiente radial para cobrir o paddle de forma mais proporcional
-            const glowRadius = Math.max(currentWidth, this.paddle.height) / 2; // Usa a maior dimensão para o raio
+            const glowRadius = Math.max(currentWidth, this.paddle.height) / 2;
             const glow = this.ctx.createRadialGradient(
                 paddleX + currentWidth / 2, 
                 paddleY + this.paddle.height / 2, 
@@ -827,8 +840,7 @@ class CoopBrickBreaker {
             glow.addColorStop(1, 'rgba(255, 165, 0, 0)');
             this.ctx.fillStyle = glow;
         
-            // Desenha o brilho em uma área que corresponde ao tamanho do paddle, com uma pequena margem
-            const glowMargin = 5; // Margem pequena para o brilho
+            const glowMargin = 5;
             this.ctx.fillRect(
                 paddleX - glowMargin, 
                 paddleY - glowMargin, 
@@ -839,8 +851,6 @@ class CoopBrickBreaker {
             if (animationProgress >= 1) {
                 this.paddle.isGrowing = false;
             }
-        
-        
         } else {
             const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor);
             const paddleGradient = this.ctx.createLinearGradient(paddleX, paddleY, paddleX, paddleY + this.paddle.height);
