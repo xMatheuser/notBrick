@@ -18,16 +18,16 @@ class CoopBrickBreaker {
         };
 
         this.paddle = {
-            width: 60,
+            width: 100,
             height: 12,
             x: this.canvas.width / 2 - 50,
             y: this.canvas.height - 30,
             speed: 8,
-            baseWidth: 60,
+            baseWidth: 100,
             growthFactor: 0,
             isGrowing: false,
             growthAnimation: 0,
-            velocity: 0 // Nova propriedade para rastrear a velocidade do paddle
+            velocity: 0
         };
 
         this.ball = {
@@ -95,6 +95,8 @@ class CoopBrickBreaker {
             isOriginal: true
         }];
 
+        this.ballTrails = []; // Novo array para armazenar os pontos do rastro de cada bola
+
         this.combo = {
             count: 0,
             active: false,
@@ -148,8 +150,8 @@ class CoopBrickBreaker {
     connectToServer() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
-        const wsUrl = `${wsProtocol}//${host}`;
-      // const wsUrl = `${wsProtocol}//${host}:8080`;
+        // const wsUrl = `${wsProtocol}//${host}`;
+        const wsUrl = `${wsProtocol}//${host}:8080`;
 
         this.ws = new WebSocket(wsUrl);
 
@@ -403,7 +405,7 @@ class CoopBrickBreaker {
             } else {
                 this.ballDirection.isAiming = false;
                 const newPaddleX = Math.max(0, Math.min(relativeX - this.paddle.width / 2, this.canvas.width - this.paddle.width));
-                this.paddle.velocity = newPaddleX - this.paddle.x; // Calcular velocidade do paddle
+                this.paddle.velocity = newPaddleX - this.paddle.x;
                 this.paddle.x = newPaddleX;
             }
         }
@@ -430,6 +432,7 @@ class CoopBrickBreaker {
             dy: 0,
             isOriginal: true
         }];
+        this.ballTrails = []; // Resetar os rastros ao iniciar um novo turno
         const isMyTurn = this.gameState.currentPlayer === this.playerNumber;
         document.getElementById('currentTurn').textContent = isMyTurn ? 'Sua vez de jogar!' : `Vez do Jogador ${this.gameState.currentPlayer}`;
     }
@@ -558,12 +561,30 @@ class CoopBrickBreaker {
             if (ball.dy !== 0) {
                 ball.x += ball.dx;
                 ball.y += ball.dy;
+
+                // Adicionar ponto ao rastro da bola
+                this.ballTrails.push({
+                    x: ball.x,
+                    y: ball.y,
+                    life: 1, // Vida inicial do ponto do rastro (1 = 100%)
+                    color: ball.isOriginal ? '#0095DD' : '#00FF00', // Cor baseada no tipo da bola
+                    radius: ball.radius * 0.8 // Tamanho inicial do ponto do rastro
+                });
+
+                // Atualizar a vida dos pontos do rastro e remover os expirados
+                for (let j = this.ballTrails.length - 1; j >= 0; j--) {
+                    this.ballTrails[j].life -= 0.05; // Decremento da vida por frame
+                    if (this.ballTrails[j].life <= 0) {
+                        this.ballTrails.splice(j, 1);
+                    }
+                }
+
                 if (ball.x + ball.radius > this.canvas.width || ball.x - ball.radius < 0) ball.dx *= -1;
                 if (ball.y - ball.radius < 0) ball.dy *= -1;
                 if (ball.y + ball.radius > this.paddle.y && ball.x > this.paddle.x && ball.x < this.paddle.x + this.paddle.width) {
                     ball.dy = -ball.speed;
-                    const spinFactor = 0.1; // Fator de influência do movimento do paddle
-                    const maxSpin = 2; // Limite máximo de velocidade horizontal adicionada
+                    const spinFactor = 0.1;
+                    const maxSpin = 2;
                     let newDx = ball.dx + (this.paddle.velocity * spinFactor);
                     newDx = Math.max(-maxSpin, Math.min(maxSpin, newDx));
                     const totalSpeed = Math.sqrt(newDx * newDx + ball.dy * ball.dy);
@@ -867,6 +888,15 @@ class CoopBrickBreaker {
             this.ctx.stroke();
             this.ctx.closePath();
         }
+
+        // Desenhar os rastros das bolas
+        this.ballTrails.forEach(trail => {
+            this.ctx.beginPath();
+            this.ctx.arc(trail.x, trail.y, trail.radius * trail.life, 0, Math.PI * 2);
+            this.ctx.fillStyle = trail.color.replace('#', `rgba(${parseInt(trail.color.slice(1, 3), 16)}, ${parseInt(trail.color.slice(3, 5), 16)}, ${parseInt(trail.color.slice(5, 7), 16)}, ${trail.life})`);
+            this.ctx.fill();
+            this.ctx.closePath();
+        });
 
         this.balls.forEach(ball => {
             this.ctx.beginPath();
