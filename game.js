@@ -18,12 +18,12 @@ class CoopBrickBreaker {
         };
 
         this.paddle = {
-            width: 100,
+            width: 60,
             height: 12,
             x: this.canvas.width / 2 - 50,
             y: this.canvas.height - 30,
-            speed: 8,
-            baseWidth: 100,
+            speed: 6,
+            baseWidth: 60,
             growthFactor: 0,
             isGrowing: false,
             growthAnimation: 0
@@ -147,8 +147,8 @@ class CoopBrickBreaker {
     connectToServer() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
-        const wsUrl = `${wsProtocol}//${host}`;
-//        const wsUrl = `${wsProtocol}//${host}:8080`; // para usar local
+        // const wsUrl = `${wsProtocol}//${host}`;
+        const wsUrl = `${wsProtocol}//${host}:8080`; // para usar local
 
 
         this.ws = new WebSocket(wsUrl);
