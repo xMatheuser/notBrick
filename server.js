@@ -134,15 +134,23 @@ function handleJoin(ws, roomId) {
     }));
 }
 
+let lastUpdateTime = 0;
+const updateInterval = 100; // 100ms entre mensagens
+
 function broadcastToRoom(roomId, message, sender) {
-    const room = rooms.get(roomId);
-    if (room) {
-        const messageStr = message.toString();
-        room.forEach(client => {
-            if (client !== sender && client.readyState === WebSocket.OPEN) {
-                client.send(messageStr);
-            }
-        });
+    const now = Date.now();
+    if (now - lastUpdateTime >= updateInterval) {
+        lastUpdateTime = now;
+
+        const room = rooms.get(roomId);
+        if (room) {
+            const messageStr = message.toString();
+            room.forEach(client => {
+                if (client !== sender && client.readyState === WebSocket.OPEN) {
+                    client.send(messageStr);
+                }
+            });
+        }
     }
 }
 

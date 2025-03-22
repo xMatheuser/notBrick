@@ -237,35 +237,38 @@ class CoopBrickBreaker {
 
     handleGameUpdate(data) {
         if (this.gameState.currentPlayer !== this.playerNumber) {
-          this.paddle.x = data.paddleX;
-          
-          // Verificar se data.balls existe antes de mapear
-          if (data.balls) {
-            this.balls = data.balls.map(ballData => ({
-              ...ballData,
-              isOriginal: ballData.isOriginal
-            }));
-          }
-            
-            // Atualizar outros elementos
-            if (data.bricks) {
+            this.paddle.x = data.paddleX;
+    
+            // Safely process balls
+            if (Array.isArray(data.balls)) {
+                this.balls = data.balls.map(ballData => ({
+                    ...ballData,
+                    isOriginal: ballData.isOriginal
+                }));
+            } else {
+                console.warn('data.balls is undefined or not an array.');
+            }
+    
+            // Continue processing other parts of the update
+            if (Array.isArray(data.bricks)) {
                 this.bricks = data.bricks;
             }
+    
             if (data.guideLine) {
                 this.guideLine = data.guideLine;
             }
-            if (data.powerUps) {
+    
+            if (Array.isArray(data.powerUps)) {
                 this.powerUps = data.powerUps;
             }
-
-            // Adicionar sincronização de placares
+    
             if (data.scores) {
                 this.gameState.player1Score = data.scores.player1Score;
                 this.gameState.player2Score = data.scores.player2Score;
                 this.gameState.totalScore = data.scores.totalScore;
                 this.updateScoreDisplay();
             }
-            
+    
             if (data.level) {
                 this.gameState.level = data.level;
                 this.gameState.levelAnimation = {
@@ -274,14 +277,15 @@ class CoopBrickBreaker {
                     opacity: 0,
                     startTime: Date.now()
                 };
-                // Atualizar o marcador de progresso quando receber atualização de nível
+    
+                // Update progress marker when the level changes
                 this.updateProgressMarker();
             }
-            
-            // Atualizar projéteis e estado das armas
-            if (data.projectiles) {
+    
+            if (Array.isArray(data.projectiles)) {
                 this.projectiles = data.projectiles;
             }
+    
             if (data.gunsState) {
                 this.gunsActive = data.gunsState.active;
                 if (this.gunsTimer) clearTimeout(this.gunsTimer);
@@ -295,6 +299,7 @@ class CoopBrickBreaker {
             }
         }
     }
+    
 
     initializeBricks() {
         const bricks = [];
@@ -1038,47 +1043,63 @@ class CoopBrickBreaker {
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Desenhar borda interna simples em branco
-        this.ctx.strokeStyle = 'white';
+    
+        // Validar as coordenadas do paddle
+        const paddleX = isFinite(this.paddle.x) ? this.paddle.x : 0;
+        const paddleY = isFinite(this.paddle.y) ? this.paddle.y : this.canvas.height - this.paddle.height;
+        const paddleWidth = isFinite(this.paddle.baseWidth) ? this.paddle.baseWidth : 100;
+    
+        // Criar gradiente para o paddle
+        const paddleGradient = this.ctx.createLinearGradient(
+            paddleX,
+            paddleY,
+            paddleX,
+            paddleY + this.paddle.height
+        );
+        paddleGradient.addColorStop(0, '#4169E1');
+        paddleGradient.addColorStop(0.5, '#0095DD');
+        paddleGradient.addColorStop(1, '#1E90FF');
+    
+        // Desenhar paddle
+        this.ctx.beginPath();
+        this.ctx.roundRect(paddleX, paddleY, paddleWidth, this.paddle.height, [10, 10, 5, 5]);
+        this.ctx.fillStyle = paddleGradient;
+        this.ctx.fill();
+        this.ctx.closePath();
+
+        // Adicionar borda brilhante
+        this.ctx.strokeStyle = '#87CEEB';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw paddle with style
+        this.ctx.stroke();
+
         if (this.paddle.isGrowing) {
-            this.paddle.growthAnimation += 0.05;
-            if (this.paddle.growthAnimation >= 1) {
-                this.paddle.isGrowing = false;
-                this.paddle.growthAnimation = 0;
-            }
-
-            const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor);
-            const animatedWidth = this.paddle.baseWidth + 
-                (currentWidth - this.paddle.baseWidth) * 
-                (Math.sin(this.paddle.growthAnimation * Math.PI - Math.PI/2) + 1) / 2;
-
-            // Criar gradiente para o paddle
+            const animationDuration = 500; // Duração da animação de crescimento em ms
+            const animationProgress = Math.min(1, (Date.now() - this.paddle.growthAnimation) / animationDuration);
+            const currentWidth = this.paddle.baseWidth * (1 + this.paddle.growthFactor * animationProgress);
+            
+            // Gradiente com ajuste para a nova largura
             const paddleGradient = this.ctx.createLinearGradient(
                 this.paddle.x,
                 this.paddle.y,
                 this.paddle.x,
                 this.paddle.y + this.paddle.height
             );
-            paddleGradient.addColorStop(0, '#4169E1');    // Azul royal no topo
-            paddleGradient.addColorStop(0.5, '#0095DD');  // Azul original no meio
-            paddleGradient.addColorStop(1, '#1E90FF');    // Azul claro embaixo
+            paddleGradient.addColorStop(0, '#4169E1');
+            paddleGradient.addColorStop(0.5, '#0095DD');
+            paddleGradient.addColorStop(1, '#1E90FF');
 
             // Desenhar paddle com bordas arredondadas
             this.ctx.beginPath();
             this.ctx.roundRect(
                 this.paddle.x,
                 this.paddle.y,
-                animatedWidth,
+                currentWidth,
                 this.paddle.height,
-                [10, 10, 5, 5] // Raios dos cantos: top-left, top-right, bottom-right, bottom-left
+                [10, 10, 5, 5]
             );
             this.ctx.fillStyle = paddleGradient;
             this.ctx.fill();
+            this.ctx.closePath();
 
             // Adicionar borda brilhante
             this.ctx.strokeStyle = '#87CEEB';
@@ -1125,12 +1146,14 @@ class CoopBrickBreaker {
             );
             this.ctx.fillStyle = paddleGradient;
             this.ctx.fill();
+            this.ctx.closePath();
 
             // Adicionar borda brilhante
             this.ctx.strokeStyle = '#87CEEB';
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
         }
+
 
         // Desenhar todas as bolas
         this.balls.forEach(ball => {
