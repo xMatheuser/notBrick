@@ -150,8 +150,8 @@ class CoopBrickBreaker {
     connectToServer() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
-        // const wsUrl = `${wsProtocol}//${host}`;
-        const wsUrl = `${wsProtocol}//${host}:8080`;
+         const wsUrl = `${wsProtocol}//${host}`;
+        //const wsUrl = `${wsProtocol}//${host}:8080`;
 
         this.ws = new WebSocket(wsUrl);
 
